@@ -1,4 +1,10 @@
 # LexiLink Godot项目 .gitignore
+.gitignore
+.cursor/
+.specstory/
+tests/
+docs/godot-manual/
+docs/reports/
 
 # Godot 4.x 特定文件
 .godot/
