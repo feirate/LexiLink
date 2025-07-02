@@ -1,0 +1,724 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# LexiLink 项目编码规范 v1.0
+# 基于 Godot 4.4 官方最佳实践制定
+# 文档类型: .mdc (Markdown Code Documentation)
+
+## 📋 总体原则
+
+### 开发原则优先级 (按场景动态调整)
+```priority
+# MVP开发阶段 (当前)
+1. YAGNI (You Aren't Gonna Need It) - 只实现真正需要的功能
+2. KISS (Keep It Simple, Stupid) - 保持设计和实现简单性  
+3. First Principles - 梳理核心需求与边界
+4. SOLID - 面向对象设计原则
+5. DRY - 消除重复，提炼公用逻辑
+
+# 后续迭代阶段
+1. First Principles - 重新审视需求
+2. SOLID - 重构优化架构
+3. YAGNI - 功能扩展谨慎
+4. DRY - 代码复用最大化
+5. KISS - 维护简洁性
+```
+
+### 代码质量标准
+- ✅ 可读性优于性能 (在性能不成问题时)
+- ✅ 中英文注释混合 (英文API，中文业务逻辑)
+- ✅ 防御式编程 (null检查，边界处理)
+- ✅ 渐进式优化 (先工作，再优化)
+- ✅ 错误处理优先 (预期所有可能的失败)
+
+## 🔤 命名规范
+
+### GDScript 命名约定
+```gdscript
+# 【变量】- snake_case
+var player_health: int = 100
+var current_syllable_data: SyllableData
+var is_dragging_enabled: bool = true
+var audio_volume_multiplier: float = 1.0
+
+# 【常量】- SCREAMING_SNAKE_CASE  
+const MAX_SYLLABLE_COUNT: int = 50
+const DEFAULT_AUDIO_FORMAT: String = "ogg"
+const CARD_RARITY_COLORS: Dictionary = {
+    "common": Color.WHITE,
+    "rare": Color.BLUE,
+    "epic": Color.PURPLE
+}
+
+# 【函数】- snake_case (动词开头)
+func initialize_game_session() -> void:
+func validate_syllable_connection(from: SyllableCard, to: SyllableCard) -> bool:
+func calculate_learning_progress() -> float:
+func handle_drag_input_event(event: InputEvent) -> void:
+
+# 【类名】- PascalCase (名词)
+class_name SyllableCard extends Control
+class_name DragController extends Node
+class_name LearningAnalytics extends RefCounted
+class_name AudioManager extends AudioStreamPlayer
+
+# 【信号】- snake_case (过去时态)
+signal syllable_connected(from_card: SyllableCard, to_card: SyllableCard)
+signal game_session_completed(score: int, accuracy: float)
+signal card_collection_updated(new_card: CardData)
+signal user_progress_saved(progress_data: Dictionary)
+
+# 【枚举】- PascalCase
+enum CardRarity {
+    COMMON,
+    UNCOMMON, 
+    RARE,
+    EPIC,
+    LEGENDARY
+}
+
+enum DifficultyLevel {
+    BEGINNER,
+    INTERMEDIATE,
+    ADVANCED,
+    EXPERT
+}
+
+# 【文件名】- snake_case
+# 脚本: syllable_card.gd, drag_controller.gd, audio_manager.gd
+# 场景: main_menu.tscn, game_scene.tscn, card_collection.tscn
+# 资源: card_common.png, audio_success.ogg, font_inter_bold.ttf
+```
+
+### 文件组织命名
+```filesystem
+LexiLink/
+├── scenes/           # 场景文件
+│   ├── ui/              # UI相关场景
+│   │   ├── main_menu.tscn
+│   │   ├── game_hud.tscn
+│   │   └── settings_panel.tscn
+│   ├── gameplay/        # 游戏玩法场景  
+│   │   ├── syllable_card.tscn
+│   │   ├── drag_area.tscn
+│   │   └── connection_line.tscn
+│   └── managers/        # 管理器场景
+│       ├── audio_manager.tscn
+│       └── progress_tracker.tscn
+├── scripts/          # 脚本文件
+│   ├── core/            # 核心系统
+│   │   ├── game_manager.gd
+│   │   ├── data_manager.gd
+│   │   └── scene_manager.gd
+│   ├── gameplay/        # 游戏逻辑
+│   │   ├── syllable_card.gd
+│   │   ├── drag_controller.gd
+│   │   └── connection_validator.gd
+│   ├── ui/              # UI控制器
+│   │   ├── menu_controller.gd
+│   │   ├── hud_controller.gd
+│   │   └── settings_controller.gd
+│   └── utils/           # 工具类
+│       ├── audio_utils.gd
+│       ├── tween_utils.gd
+│       └── validation_utils.gd
+├── data/             # 数据文件
+│   ├── syllables/       # 音节数据
+│   ├── cards/           # 卡片数据
+│   └── levels/          # 关卡配置
+├── assets/           # 资源文件
+│   ├── audio/           # 音频资源
+│   ├── textures/        # 纹理图片
+│   └── fonts/           # 字体文件
+└── docs/             # 文档
+    ├── api/             # API文档
+    └── design/          # 设计文档
+```
+
+## 🎨 代码格式规范
+
+### 缩进与空格
+```gdscript
+# 【缩进】- 使用Tab字符 (Godot默认)
+# 【行宽】- 最大100字符 (移动设备友好)
+# 【空行】- 逻辑块之间空一行
+
+class_name SyllableCard extends Control
+
+# 类变量声明区域
+@export var syllable_text: String = ""
+@export var card_rarity: CardRarity = CardRarity.COMMON
+
+var is_selected: bool = false
+var drag_offset: Vector2 = Vector2.ZERO
+
+# 信号声明区域  
+signal card_selected(card: SyllableCard)
+signal drag_started(position: Vector2)
+
+# 虚函数重写区域
+func _ready() -> void:
+    initialize_card_appearance()
+    connect_signals()
+
+func _input(event: InputEvent) -> void:
+    if event is InputEventMouseButton:
+        handle_mouse_click(event)
+
+# 公共函数区域
+func set_syllable_data(data: SyllableData) -> void:
+    syllable_text = data.text
+    card_rarity = data.rarity
+    update_visual_appearance()
+
+# 私有函数区域
+func _initialize_card_appearance() -> void:
+    # 实现细节...
+    pass
+
+func _connect_signals() -> void:
+    # 信号连接...
+    pass
+```
+
+### 注释规范
+```gdscript
+## 类级注释 - 简要描述类的职责和用法
+## 这个类负责处理音节卡片的显示和交互
+## 支持拖拽、选择、连接等操作
+class_name SyllableCard extends Control
+
+# 【导出变量注释】- 说明配置项用途
+@export var syllable_text: String = ""  ## 显示在卡片上的音节文本
+@export var is_draggable: bool = true   ## 是否允许拖拽操作
+
+# 【业务逻辑注释】- 中文解释复杂逻辑
+func validate_connection(target_card: SyllableCard) -> bool:
+    # 检查音节连接规则：
+    # 1. 元音后面只能跟辅音
+    # 2. 辅音后面可以跟元音或特定辅音
+    # 3. 不能连接相同类型的音节
+    
+    var current_type = get_syllable_type()
+    var target_type = target_card.get_syllable_type()
+    
+    match current_type:
+        SyllableType.VOWEL:
+            return target_type == SyllableType.CONSONANT
+        SyllableType.CONSONANT:
+            return target_type in [SyllableType.VOWEL, SyllableType.LIQUID]
+        _:
+            return false
+
+# 【TODO注释】- 标记待完成项
+func optimize_performance() -> void:
+    # TODO: 实现音频预加载缓存
+    # TODO: 添加卡片动画池复用
+    # FIXME: 修复在低端设备上的卡顿问题
+    pass
+
+# 【API文档注释】- 公共接口说明
+## 设置卡片的音节数据并更新显示
+## @param data: 包含音节文本、类型、稀有度等信息的数据对象
+## @return: 无返回值，直接更新卡片状态
+func set_syllable_data(data: SyllableData) -> void:
+    assert(data != null, "音节数据不能为空")
+    
+    syllable_text = data.text
+    syllable_type = data.type
+    card_rarity = data.rarity
+    
+    _update_visual_appearance()
+```
+
+### 错误处理模式
+```gdscript
+# 【防御式编程】- 参数验证
+func play_syllable_audio(syllable: String) -> void:
+    if syllable.is_empty():
+        push_warning("尝试播放空音节音频")
+        return
+    
+    if not audio_manager:
+        push_error("音频管理器未初始化")
+        return
+    
+    audio_manager.play_syllable(syllable)
+
+# 【资源加载错误处理】
+func load_syllable_texture(syllable_id: String) -> Texture2D:
+    var texture_path = "res://assets/syllables/%s.png" % syllable_id
+    
+    if not ResourceLoader.exists(texture_path):
+        push_warning("音节纹理不存在: %s" % texture_path)
+        return preload("res://assets/ui/default_card.png")  # 备用纹理
+    
+    var texture = load(texture_path)
+    if not texture:
+        push_error("无法加载音节纹理: %s" % texture_path)
+        return preload("res://assets/ui/default_card.png")
+    
+    return texture
+
+# 【用户输入验证】
+func handle_syllable_input(input_text: String) -> bool:
+    # 输入内容验证
+    if input_text.length() == 0:
+        show_error_message("请输入音节内容")
+        return false
+    
+    if input_text.length() > MAX_SYLLABLE_LENGTH:
+        show_error_message("音节长度不能超过%d个字符" % MAX_SYLLABLE_LENGTH)
+        return false
+    
+    # 字符有效性检查
+    var regex = RegEx.new()
+    regex.compile("^[a-zA-Z]+$")
+    if not regex.search(input_text):
+        show_error_message("音节只能包含英文字母")
+        return false
+    
+    return true
+```
+
+## 🧪 测试规范
+
+### 单元测试模式
+```gdscript
+# test_syllable_validator.gd
+extends GutTest
+
+var validator: SyllableValidator
+
+func before_each():
+    validator = SyllableValidator.new()
+
+func test_vowel_consonant_connection_valid():
+    # 测试元音+辅音连接（应该有效）
+    var vowel_card = create_test_card("a", SyllableType.VOWEL)
+    var consonant_card = create_test_card("t", SyllableType.CONSONANT)
+    
+    var result = validator.validate_connection(vowel_card, consonant_card)
+    
+    assert_true(result, "元音后连接辅音应该有效")
+
+func test_consonant_consonant_connection_invalid():
+    # 测试辅音+辅音连接（应该无效）
+    var consonant1 = create_test_card("b", SyllableType.CONSONANT)
+    var consonant2 = create_test_card("d", SyllableType.CONSONANT)
+    
+    var result = validator.validate_connection(consonant1, consonant2)
+    
+    assert_false(result, "相同辅音连接应该无效")
+
+func test_empty_syllable_validation():
+    # 测试空音节验证
+    var empty_card = create_test_card("", SyllableType.VOWEL)
+    
+    var result = validator.is_valid_syllable(empty_card)
+    
+    assert_false(result, "空音节应该无效")
+
+func create_test_card(text: String, type: SyllableType) -> SyllableCard:
+    var card = SyllableCard.new()
+    var data = SyllableData.new()
+    data.text = text
+    data.type = type
+    card.set_syllable_data(data)
+    return card
+```
+
+### 集成测试模式
+```gdscript
+# test_game_flow.gd
+extends GutTest
+
+var game_scene: GameScene
+var input_mocker: InputEventMocker
+
+func before_each():
+    game_scene = preload("res://scenes/gameplay/game_scene.tscn").instantiate()
+    add_child(game_scene)
+    input_mocker = InputEventMocker.new()
+
+func test_complete_syllable_connection_flow():
+    # 测试完整的音节连接流程
+    
+    # 1. 等待游戏初始化完成
+    await game_scene.initialization_completed
+    
+    # 2. 模拟拖拽第一个音节卡片
+    var first_card = game_scene.get_syllable_card(0)
+    input_mocker.simulate_drag_start(first_card.global_position)
+    
+    # 3. 拖拽到目标位置
+    var target_position = game_scene.get_connection_area().global_position
+    input_mocker.simulate_drag_motion(target_position)
+    
+    # 4. 释放卡片
+    input_mocker.simulate_drag_end()
+    
+    # 5. 验证连接结果
+    await game_scene.connection_validation_completed
+    assert_true(game_scene.has_valid_connection(), "应该创建有效连接")
+    
+    # 6. 验证音频播放
+    assert_true(game_scene.audio_manager.is_playing(), "应该播放连接音效")
+
+func test_invalid_connection_feedback():
+    # 测试无效连接的用户反馈
+    
+    var vowel_card = game_scene.get_vowel_card()
+    var another_vowel = game_scene.get_another_vowel_card()
+    
+    # 尝试连接两个元音（无效操作）
+    game_scene.attempt_connection(vowel_card, another_vowel)
+    
+    await game_scene.feedback_animation_completed
+    
+    # 验证错误反馈
+    assert_true(game_scene.error_feedback_shown, "应该显示错误反馈")
+    assert_false(game_scene.has_valid_connection(), "不应该创建连接")
+```
+
+## 🔄 版本控制规范
+
+### Commit 消息格式
+```bash
+# 【格式】type(scope): description
+# 【类型】必须是以下之一:
+# feat:     新功能
+# fix:      bug修复
+# docs:     文档更新
+# style:    代码格式(不影响功能)
+# refactor: 重构(既不修复bug也不添加功能)
+# test:     测试相关
+# chore:    构建工具、依赖更新
+
+# 【范围】可选，指明修改的模块:
+# ui, audio, gameplay, data, networking
+
+# 【示例】
+feat(gameplay): 添加音节拖拽连接验证功能
+fix(audio): 修复音频在Android设备上的播放延迟
+docs(api): 更新SyllableCard类的使用文档  
+style(ui): 统一按钮样式和间距
+refactor(data): 重构用户进度数据存储结构
+test(gameplay): 添加连接验证的单元测试
+chore(build): 更新Godot版本到4.4.1
+
+# 【多行提交消息示例】
+feat(roguelike): 实现随机关卡生成系统
+
+- 添加关卡生成器类
+- 实现音节池随机打乱算法  
+- 支持难度递进机制
+- 添加特殊事件触发逻辑
+
+相关Issue: #23, #24
+测试覆盖: 核心算法100%
+```
+
+### 分支管理策略
+```bash
+# 【分支命名规范】
+main                    # 生产分支，永远保持可发布状态
+develop                 # 开发主分支，集成所有功能
+feature/syllable-drag   # 功能分支，音节拖拽功能
+feature/card-collection # 功能分支，卡片收藏系统
+hotfix/audio-bug-fix    # 紧急修复分支
+release/v1.0.0          # 发布分支，准备v1.0.0版本
+
+# 【工作流程】
+1. 从develop创建feature分支
+2. 在feature分支开发和测试
+3. 完成后merge回develop
+4. 准备发布时从develop创建release分支
+5. release测试通过后merge到main并打tag
+6. 紧急问题从main创建hotfix分支
+```
+
+### 自动化脚本
+```bash
+#!/bin/bash
+# auto_commit.sh - 每日自动提交脚本
+
+# 获取当前日期和时间
+TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
+BRANCH=$(git branch --show-current)
+
+# 检查是否有未提交的更改
+if [[ -n $(git status --porcelain) ]]; then
+    echo "检测到未提交的更改，开始自动提交..."
+    
+    # 添加所有更改
+    git add .
+    
+    # 检查今天是否已有多个commit
+    TODAY=$(date "+%Y-%m-%d")
+    COMMIT_COUNT=$(git log --since="$TODAY 00:00:00" --oneline | wc -l)
+    
+    if [[ $COMMIT_COUNT -gt 3 ]]; then
+        echo "今日提交数量过多($COMMIT_COUNT)，执行commit整合..."
+        
+        # 软重置到今天第一个commit
+        FIRST_COMMIT=$(git log --since="$TODAY 00:00:00" --format="%H" | tail -1)
+        git reset --soft $FIRST_COMMIT^
+        
+        # 重新提交整合后的更改
+        git commit -m "chore(daily): 整合 $TODAY 的开发进度
+
+- 音节拖拽系统优化
+- UI界面调整
+- 代码重构和优化
+- Bug修复
+
+提交整合: $COMMIT_COUNT 个commit"
+        
+        echo "已整合今日的 $COMMIT_COUNT 个commit"
+    else
+        # 正常提交
+        git commit -m "chore(daily): 每日开发进度提交 - $TIMESTAMP
+
+自动提交包含:
+- 代码修改和优化
+- 资源文件更新
+- 文档补充
+
+分支: $BRANCH"
+    fi
+    
+    echo "自动提交完成: $TIMESTAMP"
+else
+    echo "没有检测到更改，跳过提交"
+fi
+```
+
+## 🚀 性能优化规范
+
+### 内存管理
+```gdscript
+# 【对象生命周期管理】
+class_name CardManager extends Node
+
+var card_pool: Array[SyllableCard] = []  # 卡片对象池
+var active_cards: Array[SyllableCard] = [] # 当前激活的卡片
+
+func get_card_from_pool() -> SyllableCard:
+    # 优先从对象池获取，避免频繁创建/销毁
+    if card_pool.size() > 0:
+        return card_pool.pop_back()
+    else:
+        return preload("res://scenes/gameplay/syllable_card.tscn").instantiate()
+
+func return_card_to_pool(card: SyllableCard) -> void:
+    # 重置卡片状态并回收到对象池
+    card.reset_state()
+    card.visible = false
+    active_cards.erase(card)
+    card_pool.append(card)
+
+# 【资源预加载策略】
+func preload_essential_resources() -> void:
+    # 预加载必需资源，避免游戏中加载卡顿
+    var essential_textures = [
+        "res://assets/cards/common_card.png",
+        "res://assets/cards/rare_card.png",
+        "res://assets/ui/connection_line.png"
+    ]
+    
+    for texture_path in essential_textures:
+        ResourceLoader.load_threaded_request(texture_path)
+    
+    # 预加载音频资源
+    AudioManager.preload_common_sounds()
+```
+
+### 渲染优化
+```gdscript
+# 【批量渲染优化】
+extends Control
+class_name OptimizedCardRenderer
+
+@export var max_visible_cards: int = 20  # 限制同时渲染的卡片数量
+
+func _ready() -> void:
+    # 启用裁剪优化
+    clip_contents = true
+    
+    # 设置更新频率
+    set_process_mode(Node.PROCESS_MODE_WHEN_PAUSED)
+
+func update_card_visibility() -> void:
+    # 只渲染视口内的卡片
+    var viewport_rect = get_viewport_rect()
+    var visible_count = 0
+    
+    for card in all_cards:
+        var card_rect = Rect2(card.global_position, card.size)
+        var is_in_viewport = viewport_rect.intersects(card_rect)
+        
+        if is_in_viewport and visible_count < max_visible_cards:
+            card.visible = true
+            visible_count += 1
+        else:
+            card.visible = false
+
+# 【动画性能优化】
+func create_optimized_tween() -> Tween:
+    var tween = create_tween()
+    tween.set_process_mode(Tween.TWEEN_PROCESS_IDLE)  # 使用空闲时间处理
+    tween.set_ease(Tween.EASE_OUT)
+    tween.set_trans(Tween.TRANS_CUBIC)
+    return tween
+```
+
+### 音频优化
+```gdscript
+# 【音频流管理】
+extends AudioStreamPlayer
+class_name OptimizedAudioPlayer
+
+var audio_cache: Dictionary = {}  # 音频缓存
+var max_cache_size: int = 50     # 最大缓存数量
+
+func play_syllable_audio(syllable_id: String) -> void:
+    var audio_stream = get_cached_audio(syllable_id)
+    if audio_stream:
+        stream = audio_stream
+        play()
+
+func get_cached_audio(syllable_id: String) -> AudioStream:
+    # 检查缓存
+    if syllable_id in audio_cache:
+        return audio_cache[syllable_id]
+    
+    # 加载新音频
+    var audio_path = "res://assets/audio/syllables/%s.ogg" % syllable_id
+    if ResourceLoader.exists(audio_path):
+        var audio_stream = load(audio_path)
+        
+        # 管理缓存大小
+        if audio_cache.size() >= max_cache_size:
+            # 移除最少使用的音频
+            var oldest_key = audio_cache.keys()[0]
+            audio_cache.erase(oldest_key)
+        
+        audio_cache[syllable_id] = audio_stream
+        return audio_stream
+    
+    return null
+```
+
+## 📱 跨平台兼容性
+
+### 输入处理统一
+```gdscript
+# 【统一输入处理】
+extends Control
+class_name CrossPlatformInputHandler
+
+func _input(event: InputEvent) -> void:
+    # 统一处理鼠标和触屏输入
+    if event is InputEventMouseButton or event is InputEventScreenTouch:
+        handle_pointer_down(get_pointer_position(event), event.pressed)
+    elif event is InputEventMouseMotion or event is InputEventScreenDrag:
+        handle_pointer_motion(get_pointer_position(event))
+
+func get_pointer_position(event: InputEvent) -> Vector2:
+    if event is InputEventMouse:
+        return event.position
+    elif event is InputEventScreenTouch:
+        return event.position
+    elif event is InputEventScreenDrag:
+        return event.position
+    return Vector2.ZERO
+
+func handle_pointer_down(pos: Vector2, pressed: bool) -> void:
+    # 根据平台调整触控响应
+    var touch_radius = 30.0 if OS.has_feature("mobile") else 10.0
+    
+    for card in get_cards_in_area(pos, touch_radius):
+        if pressed:
+            card.on_touch_started()
+        else:
+            card.on_touch_ended()
+```
+
+### 分辨率适配
+```gdscript
+# 【响应式UI布局】
+extends Control
+class_name ResponsiveLayout
+
+@export var base_resolution: Vector2 = Vector2(1080, 1920)  # 基准分辨率
+@export var min_scale: float = 0.5
+@export var max_scale: float = 2.0
+
+func _ready() -> void:
+    # 监听视口大小变化
+    get_viewport().size_changed.connect(_on_viewport_size_changed)
+    _update_layout()
+
+func _on_viewport_size_changed() -> void:
+    _update_layout()
+
+func _update_layout() -> void:
+    var current_size = get_viewport().get_visible_rect().size
+    var scale_factor = calculate_scale_factor(current_size)
+    
+    # 应用缩放
+    scale = Vector2.ONE * scale_factor
+    
+    # 调整字体大小
+    update_font_sizes(scale_factor)
+    
+    # 重新布局UI元素
+    rearrange_ui_elements()
+
+func calculate_scale_factor(screen_size: Vector2) -> float:
+    var width_scale = screen_size.x / base_resolution.x
+    var height_scale = screen_size.y / base_resolution.y
+    
+    # 使用较小的缩放比例保证完整显示
+    var scale_factor = min(width_scale, height_scale)
+    
+    return clamp(scale_factor, min_scale, max_scale)
+```
+
+---
+
+## 📋 编码检查清单
+
+### 提交前检查 (每次commit前)
+- [ ] 代码符合命名规范
+- [ ] 关键逻辑添加了注释
+- [ ] 错误处理完善
+- [ ] 内存泄漏检查
+- [ ] 跨平台兼容性测试
+- [ ] 性能影响评估
+
+### 功能完成检查 (每个feature完成时)
+- [ ] 单元测试覆盖率>80%
+- [ ] 集成测试通过
+- [ ] 用户体验测试
+- [ ] 代码审查完成
+- [ ] 文档更新
+- [ ] 多设备测试验证
+
+### 发布前检查 (release前)
+- [ ] 所有测试通过
+- [ ] 性能基准达标
+- [ ] 内存使用合理
+- [ ] 多平台构建成功
+- [ ] 用户接受度测试
+- [ ] 安全性检查
+
+---
+
+**文档版本**: v1.0  
+**基于**: Godot 4.4官方Style Guide + LexiLink项目需求  
+**更新频率**: 随项目演进动态调整  
+**维护者**: LexiLink开发团队

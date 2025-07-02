@@ -1,0 +1,96 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; but for LexiLink MVP we'll setup the essential configs.
+
+[application]
+
+config/name="LexiLink"
+config/description="音节拼接英语学习游戏 - 语言探险家的奇幻冒险"
+config/version="1.0.0"
+run/main_scene="res://scenes/ui/main_menu.tscn"
+config/use_custom_user_dir=true
+config/custom_user_dir_name="LexiLink"
+config/icon="res://assets/icons/app_icon.png"
+
+[audio]
+
+buses/default_bus_layout="res://audio/default_bus_layout.tres"
+driver/enable_input=true
+
+[autoload]
+
+GameManager="*res://scripts/core/game_manager.gd"
+DataManager="*res://scripts/core/data_manager.gd"
+AudioManager="*res://scripts/core/audio_manager.gd"
+SceneManager="*res://scripts/core/scene_manager.gd"
+
+[debug]
+
+gdscript/warnings/enable=true
+gdscript/warnings/treat_warnings_as_errors=false
+gdscript/warnings/exclude_addons=true
+
+[display]
+
+window/size/viewport_width=1080
+window/size/viewport_height=1920
+window/size/mode=2
+window/size/resizable=true
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation="portrait"
+
+[gui]
+
+common/drop_mouse_on_gui_input_disabled=true
+theme/custom="res://assets/ui/lexilink_theme.tres"
+theme/custom_font="res://assets/fonts/inter_regular.ttf"
+
+[input]
+
+ui_touch={
+"deadzone": 0.2,
+"events": [Object(InputEventScreenTouch,"resource_local_to_scene":false,"resource_name":"","device":-1,"finger_index":0,"position":Vector2(0, 0),"pressed":false,"canceled":false,"double_tap":false)]
+}
+
+drag_start={
+"deadzone": 0.2,
+"events": [Object(InputEventMouseButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"button_mask":1,"position":Vector2(0, 0),"global_position":Vector2(0, 0),"factor":1.0,"button_index":1,"canceled":false,"pressed":true,"double_click":false)]
+}
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=true
+pointing/emulate_mouse_from_touch=true
+
+[internationalization]
+
+locale/translations=PackedStringArray("res://data/localization/zh_CN.po", "res://data/localization/en_US.po")
+locale/fallback="en_US"
+
+[layer_names]
+
+2d_render/layer_1="Background"
+2d_render/layer_2="Cards"
+2d_render/layer_3="UI"
+2d_render/layer_4="Effects"
+2d_render/layer_5="Debug"
+
+[physics]
+
+common/enable_pause_aware_picking=true
+2d/default_gravity=980
+
+[rendering]
+
+renderer/rendering_method="mobile"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/canvas_textures/default_texture_filter=2
+textures/vram_compression/import_etc2_astc=true
+2d/use_pixel_snap=true
+anti_aliasing/quality/msaa_2d=2
+
+[network]
+
+limits/debugger/remote_port=6007
+limits/debugger/max_chars_per_second=32768 
