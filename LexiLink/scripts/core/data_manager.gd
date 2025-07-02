@@ -1,363 +1,259 @@
-## LexiLink 数据管理器
-## 负责本地数据存储、音节数据管理、用户配置和静态数据加载
+# @desc: 负责本地数据存储、音节数据管理、用户配置和静态数据加载
+# @author: LexiLink
+# @date: 2024-07-02
 extends Node
 
-# 信号定义
+# 1. Signals
 signal save_completed(success: bool)
 signal data_loaded(data_type: String, data: Dictionary)
 signal syllable_data_updated()
 
-# 数据路径配置
+# 2. Constants
 const USER_DATA_PATH = "user://save_data.json"
 const CONFIG_PATH = "user://config.json"
 const SYLLABLE_DATA_PATH = "res://data/syllables/"
 const CARD_DATA_PATH = "res://data/cards/"
 
-# 缓存数据
-var syllable_database: Dictionary = {}
-var card_database: Dictionary = {}
-var user_config: Dictionary = {}
-var cached_user_data: Dictionary = {}
+# 3. Private Variables
+var _syllable_database: Dictionary = {}
+var _card_database: Dictionary = {}
+var _user_config: Dictionary = {}
+var _cached_user_data: Dictionary = {}
 
-# 默认配置
-var default_config: Dictionary = {
-    "audio_volume": 0.8,
-    "sfx_volume": 0.7,
-    "language": "zh_CN",
-    "difficulty": "medium",
-    "tutorial_completed": false,
-    "first_launch": true
+var _default_config: Dictionary = {
+	"audio_volume": 0.8,
+	"sfx_volume": 0.7,
+	"language": "zh_CN",
+	"difficulty": "medium",
+	"tutorial_completed": false,
+	"first_launch": true
 }
 
+
+# 4. Lifecycle Methods
 func _ready() -> void:
-    print("Data Manager 初始化...")
-    
-    # 确保用户数据目录存在
-    ensure_user_directory()
-    
-    # 加载配置文件
-    load_config()
-    
-    # 预加载静态数据
-    await preload_static_data()
-    
-    print("Data Manager 初始化完成")
+	print("Data Manager 初始化...")
+	
+	_ensure_user_directory()
+	_load_config()
+	_load_all_user_data_from_disk()
+	
+	await _preload_static_data()
+	
+	print("Data Manager 初始化完成")
 
-func ensure_user_directory() -> void:
-    """确保用户数据目录存在"""
-    var dir = DirAccess.open("user://")
-    if not dir:
-        push_error("无法访问用户数据目录")
 
-func load_config() -> void:
-    """加载用户配置"""
-    if FileAccess.file_exists(CONFIG_PATH):
-        var file = FileAccess.open(CONFIG_PATH, FileAccess.READ)
-        if file:
-            var json_string = file.get_as_text()
-            file.close()
-            
-            var json = JSON.new()
-            var parse_result = json.parse(json_string)
-            
-            if parse_result == OK:
-                user_config = json.data
-                print("用户配置已加载")
-            else:
-                print("配置文件解析失败，使用默认配置")
-                user_config = default_config.duplicate()
-        else:
-            print("无法打开配置文件，使用默认配置")
-            user_config = default_config.duplicate()
-    else:
-        print("配置文件不存在，创建默认配置")
-        user_config = default_config.duplicate()
-        save_config()
-
-func save_config() -> void:
-    """保存用户配置"""
-    var file = FileAccess.open(CONFIG_PATH, FileAccess.WRITE)
-    if file:
-        var json_string = JSON.stringify(user_config)
-        file.store_string(json_string)
-        file.close()
-        print("用户配置已保存")
-    else:
-        push_error("无法保存配置文件")
-
-func preload_static_data() -> void:
-    """预加载静态数据"""
-    print("正在加载静态数据...")
-    
-    # 加载音节数据
-    await load_syllable_database()
-    
-    # 加载卡片数据  
-    await load_card_database()
-    
-    print("静态数据加载完成")
-
-func load_syllable_database() -> void:
-    """加载音节数据库"""
-    var syllable_files = [
-        "basic_syllables.json",
-        "advanced_syllables.json",
-        "special_syllables.json"
-    ]
-    
-    for file_name in syllable_files:
-        var file_path = SYLLABLE_DATA_PATH + file_name
-        if ResourceLoader.exists(file_path):
-            var resource = load(file_path)
-            if resource is Resource:
-                # 如果是Godot资源文件
-                print("加载音节资源: %s" % file_name)
-            else:
-                # 如果是JSON文件
-                var file_data = load_json_file(file_path)
-                if file_data:
-                    syllable_database.merge(file_data)
-                    print("加载音节数据: %s" % file_name)
-        else:
-            # 创建示例数据
-            if file_name == "basic_syllables.json":
-                create_sample_syllable_data()
-
-func create_sample_syllable_data() -> void:
-    """创建示例音节数据"""
-    var sample_data = {
-        "vowels": {
-            "a": {"type": "vowel", "difficulty": 1, "audio_file": "a.ogg"},
-            "e": {"type": "vowel", "difficulty": 1, "audio_file": "e.ogg"},
-            "i": {"type": "vowel", "difficulty": 1, "audio_file": "i.ogg"},
-            "o": {"type": "vowel", "difficulty": 1, "audio_file": "o.ogg"},
-            "u": {"type": "vowel", "difficulty": 1, "audio_file": "u.ogg"}
-        },
-        "consonants": {
-            "b": {"type": "consonant", "difficulty": 1, "audio_file": "b.ogg"},
-            "c": {"type": "consonant", "difficulty": 1, "audio_file": "c.ogg"},
-            "d": {"type": "consonant", "difficulty": 1, "audio_file": "d.ogg"},
-            "f": {"type": "consonant", "difficulty": 1, "audio_file": "f.ogg"},
-            "g": {"type": "consonant", "difficulty": 1, "audio_file": "g.ogg"}
-        },
-        "common_words": {
-            "cat": {"syllables": ["c", "a", "t"], "difficulty": 2, "meaning": "猫"},
-            "dog": {"syllables": ["d", "o", "g"], "difficulty": 2, "meaning": "狗"},
-            "sun": {"syllables": ["s", "u", "n"], "difficulty": 2, "meaning": "太阳"},
-            "run": {"syllables": ["r", "u", "n"], "difficulty": 2, "meaning": "跑"}
-        }
-    }
-    
-    syllable_database.merge(sample_data)
-    save_json_file(SYLLABLE_DATA_PATH + "basic_syllables.json", sample_data)
-
-func load_card_database() -> void:
-    """加载卡片数据库"""
-    # 基于音节数据生成卡片数据
-    card_database = {
-        "rarities": {
-            "common": {"color": "#FFFFFF", "probability": 0.6},
-            "uncommon": {"color": "#00FF00", "probability": 0.25},
-            "rare": {"color": "#0080FF", "probability": 0.1},
-            "epic": {"color": "#8000FF", "probability": 0.04},
-            "legendary": {"color": "#FF8000", "probability": 0.01}
-        },
-        "card_types": {
-            "syllable": {"base_score": 10},
-            "word": {"base_score": 50},
-            "special": {"base_score": 100}
-        }
-    }
-
-func load_json_file(file_path: String) -> Dictionary:
-    """加载JSON文件"""
-    if not FileAccess.file_exists(file_path):
-        return {}
-    
-    var file = FileAccess.open(file_path, FileAccess.READ)
-    if not file:
-        push_error("无法打开文件: %s" % file_path)
-        return {}
-    
-    var json_string = file.get_as_text()
-    file.close()
-    
-    var json = JSON.new()
-    var parse_result = json.parse(json_string)
-    
-    if parse_result == OK:
-        return json.data
-    else:
-        push_error("JSON解析失败: %s" % file_path)
-        return {}
-
-func save_json_file(file_path: String, data: Dictionary) -> bool:
-    """保存JSON文件"""
-    # 确保目录存在
-    var dir_path = file_path.get_base_dir()
-    var dir = DirAccess.open("res://")
-    if not dir.dir_exists(dir_path):
-        dir.make_dir_recursive(dir_path)
-    
-    var file = FileAccess.open(file_path, FileAccess.WRITE)
-    if not file:
-        push_error("无法创建文件: %s" % file_path)
-        return false
-    
-    var json_string = JSON.stringify(data, "\t")
-    file.store_string(json_string)
-    file.close()
-    
-    return true
-
-# 用户数据管理
+# 5. Public Methods
+# 保存单个键值对到用户数据缓存
+# @param key: String - 数据的键
+# @param data: Variant - 要保存的数据
 func save_user_data(key: String, data: Variant) -> void:
-    """保存用户数据"""
-    # 加载现有数据
-    var all_data = load_all_user_data()
-    
-    # 更新指定键的数据
-    all_data[key] = data
-    
-    # 保存到文件
-    var file = FileAccess.open(USER_DATA_PATH, FileAccess.WRITE)
-    if file:
-        var json_string = JSON.stringify(all_data)
-        file.store_string(json_string)
-        file.close()
-        
-        # 更新缓存
-        cached_user_data[key] = data
-        
-        save_completed.emit(true)
-        print("用户数据已保存: %s" % key)
-    else:
-        push_error("无法保存用户数据")
-        save_completed.emit(false)
+	_cached_user_data[key] = data
 
+
+# 从用户数据缓存中加载数据
+# @param key: String - 数据的键
+# @param default_value: Variant - 如果键不存在时返回的默认值
+# @return: Variant - 加载的数据或默认值
 func load_user_data(key: String, default_value: Variant = null) -> Variant:
-    """加载用户数据"""
-    # 先检查缓存
-    if key in cached_user_data:
-        return cached_user_data[key]
-    
-    # 从文件加载
-    var all_data = load_all_user_data()
-    
-    if key in all_data:
-        cached_user_data[key] = all_data[key]
-        return all_data[key]
-    else:
-        return default_value
+	return _cached_user_data.get(key, default_value)
 
-func load_all_user_data() -> Dictionary:
-    """加载所有用户数据"""
-    if not FileAccess.file_exists(USER_DATA_PATH):
-        return {}
-    
-    var file = FileAccess.open(USER_DATA_PATH, FileAccess.READ)
-    if not file:
-        push_error("无法打开用户数据文件")
-        return {}
-    
-    var json_string = file.get_as_text()
-    file.close()
-    
-    var json = JSON.new()
-    var parse_result = json.parse(json_string)
-    
-    if parse_result == OK:
-        return json.data
-    else:
-        push_error("用户数据解析失败")
-        return {}
 
-# 音节数据API
-func get_syllable_data(syllable_id: String) -> Dictionary:
-    """获取音节数据"""
-    for category in syllable_database.values():
-        if syllable_id in category:
-            return category[syllable_id]
-    return {}
+# 获取配置值
+# @param key: String - 配置项的键
+# @param default_value: Variant - 默认值
+# @return: Variant - 配置值
+func get_config_value(key: String, default_value: Variant = null) -> Variant:
+	return _user_config.get(key, default_value)
 
-func get_syllables_by_type(syllable_type: String) -> Array:
-    """根据类型获取音节列表"""
-    var result = []
-    
-    for category_name in syllable_database:
-        var category = syllable_database[category_name]
-        for syllable_id in category:
-            var syllable_data = category[syllable_id]
-            if syllable_data.get("type", "") == syllable_type:
-                result.append({
-                    "id": syllable_id,
-                    "data": syllable_data
-                })
-    
-    return result
 
-func get_syllables_by_difficulty(difficulty: int) -> Array:
-    """根据难度获取音节列表"""
-    var result = []
-    
-    for category_name in syllable_database:
-        var category = syllable_database[category_name]
-        for syllable_id in category:
-            var syllable_data = category[syllable_id]
-            if syllable_data.get("difficulty", 1) == difficulty:
-                result.append({
-                    "id": syllable_id,
-                    "data": syllable_data
-                })
-    
-    return result
+# 设置配置值并立即保存
+# @param key: String - 配置项的键
+# @param value: Variant - 新的配置值
+func set_config_value(key: String, value: Variant) -> void:
+	_user_config[key] = value
+	_save_config()
 
-func get_word_data(word: String) -> Dictionary:
-    """获取单词数据"""
-    if "common_words" in syllable_database:
-        return syllable_database["common_words"].get(word, {})
-    return {}
 
-func validate_syllable_connection(from_syllable: String, to_syllable: String) -> bool:
-    """验证音节连接规则"""
-    var from_data = get_syllable_data(from_syllable)
-    var to_data = get_syllable_data(to_syllable)
-    
-    if from_data.is_empty() or to_data.is_empty():
-        return false
-    
-    var from_type = from_data.get("type", "")
-    var to_type = to_data.get("type", "")
-    
-    # 基础连接规则
-    match from_type:
-        "vowel":
-            return to_type == "consonant"
-        "consonant":
-            return to_type in ["vowel", "liquid"]
-        _:
-            return false
+# 获取完整的音节数据库
+# @return: Dictionary - 音节数据库的副本
+func get_syllable_database() -> Dictionary:
+	return _syllable_database.duplicate()
 
-# 配置管理API
-func get_config(key: String, default_value: Variant = null) -> Variant:
-    """获取配置值"""
-    return user_config.get(key, default_value)
 
-func set_config(key: String, value: Variant) -> void:
-    """设置配置值"""
-    user_config[key] = value
-    save_config()
+# 获取完整的卡片数据库
+# @return: Dictionary - 卡片数据库的副本
+func get_card_database() -> Dictionary:
+	return _card_database.duplicate()
 
-func reset_config() -> void:
-    """重置配置到默认值"""
-    user_config = default_config.duplicate()
-    save_config()
 
-# 缓存管理
-func clear_cache() -> void:
-    """清除缓存数据"""
-    cached_user_data.clear()
+# 将所有缓存的数据写入磁盘
+# @return: bool - 是否保存成功
+func save_all_data_to_disk() -> bool:
+	var user_data_success = _write_user_data_to_disk()
+	var config_success = _save_config()
+	
+	var success = user_data_success and config_success
+	save_completed.emit(success)
+	return success
 
-func get_cache_size() -> int:
-    """获取缓存大小"""
-    return cached_user_data.size() 
+
+# 6. Private Methods
+# 确保用户数据目录存在
+func _ensure_user_directory() -> void:
+	var dir = DirAccess.open("user://")
+	if not dir:
+		push_error("无法访问用户数据目录 'user://'")
+
+
+# 加载用户配置
+func _load_config() -> void:
+	var config_data = _load_json_file(CONFIG_PATH)
+	if not config_data.is_empty():
+		_user_config = config_data
+		if GameManager and GameManager.debug_mode:
+			print("用户配置已加载")
+	else:
+		_user_config = _default_config.duplicate()
+		if GameManager and GameManager.debug_mode:
+			print("未找到用户配置, 使用默认配置")
+		_save_config()
+
+
+# 保存用户配置
+# @return: bool - 是否保存成功
+func _save_config() -> bool:
+	var success = _save_json_file(CONFIG_PATH, _user_config)
+	if success and GameManager and GameManager.debug_mode:
+		print("用户配置已保存")
+	elif not success:
+		push_error("无法保存用户配置文件")
+	return success
+
+
+# 加载所有用户数据到缓存
+func _load_all_user_data_from_disk() -> void:
+	_cached_user_data = _load_json_file(USER_DATA_PATH, {})
+
+
+# 将缓存的用户数据写入磁盘
+# @return: bool - 是否保存成功
+func _write_user_data_to_disk() -> bool:
+	var success = _save_json_file(USER_DATA_PATH, _cached_user_data)
+	if success and GameManager and GameManager.debug_mode:
+		print("用户数据已保存到磁盘")
+	elif not success:
+		push_error("无法保存用户数据到磁盘")
+	return success
+
+
+# 预加载静态数据
+func _preload_static_data() -> void:
+	if GameManager and GameManager.debug_mode:
+		print("正在加载静态数据...")
+	
+	await _load_syllable_database()
+	await _load_card_database()
+	
+	if GameManager and GameManager.debug_mode:
+		print("静态数据加载完成")
+
+
+# 加载音节数据库
+func _load_syllable_database() -> void:
+	var dir = DirAccess.open(SYLLABLE_DATA_PATH)
+	if dir:
+		dir.list_dir_begin()
+		var file_name = dir.get_next()
+		while file_name != "":
+			if not dir.current_is_dir() and file_name.ends_with(".json"):
+				var file_path = SYLLABLE_DATA_PATH.path_join(file_name)
+				var file_data = _load_json_file(file_path)
+				if file_data:
+					_syllable_database.merge(file_data, true)
+			file_name = dir.get_next()
+	else:
+		push_error("无法打开音节数据目录: " + SYLLABLE_DATA_PATH)
+		_create_sample_syllable_data()
+
+	syllable_data_updated.emit()
+
+
+# 创建示例音节数据 (仅当目录读取失败时作为后备)
+func _create_sample_syllable_data() -> void:
+	push_warning("创建示例音节数据作为后备。")
+	var sample_data = {
+		"vowels": {"a": {"type": "vowel", "difficulty": 1}},
+		"consonants": {"b": {"type": "consonant", "difficulty": 1}},
+		"common_words": {"cat": {"syllables": ["c", "a", "t"], "difficulty": 2, "meaning": "猫"}},
+	}
+	_syllable_database = sample_data
+	_save_json_file(SYLLABLE_DATA_PATH.path_join("basic_syllables.json"), sample_data)
+
+
+# 加载卡片数据库
+func _load_card_database() -> void:
+	var dir = DirAccess.open(CARD_DATA_PATH)
+	if dir:
+		dir.list_dir_begin()
+		var file_name = dir.get_next()
+		while file_name != "":
+			if not dir.current_is_dir() and file_name.ends_with(".json"):
+				var file_path = CARD_DATA_PATH.path_join(file_name)
+				var file_data = _load_json_file(file_path)
+				if file_data:
+					# 使用 merge 来合并多个卡片文件的数据
+					_card_database.merge(file_data, true)
+			file_name = dir.get_next()
+	else:
+		push_error("无法打开卡片数据目录: " + CARD_DATA_PATH)
+
+	# 可以在此处发射一个信号，通知其他部分卡片数据已更新
+	# data_loaded.emit("cards", _card_database)
+
+
+# 通用JSON文件加载工具
+# @param file_path: String - 文件路径
+# @param default_value: Dictionary - 加载失败时返回的默认值
+# @return: Dictionary - JSON数据或默认值
+func _load_json_file(file_path: String, default_value: Dictionary = {}) -> Dictionary:
+	if not FileAccess.file_exists(file_path):
+		return default_value
+
+	var file = FileAccess.open(file_path, FileAccess.READ)
+	if not file:
+		push_error("无法打开文件: %s" % file_path)
+		return default_value
+	
+	var json_string = file.get_as_text()
+	var json = JSON.new()
+	var error = json.parse(json_string)
+	
+	if error == OK:
+		return json.get_data()
+	else:
+		push_error("JSON 解析失败: %s (错误: %s, 行: %s)" % [file_path, json.get_error_message(), json.get_error_line()])
+		return default_value
+
+
+# 通用JSON文件保存工具
+# @param file_path: String - 文件路径
+# @param data: Dictionary - 要保存的数据
+# @return: bool - 是否保存成功
+func _save_json_file(file_path: String, data: Dictionary) -> bool:
+	var dir_path = file_path.get_base_dir()
+	var dir = DirAccess.open(dir_path)
+	if not dir:
+		var err = DirAccess.make_dir_recursive_absolute(dir_path)
+		if err != OK:
+			push_error("创建目录失败: %s, 错误码: %s" % [dir_path, err])
+			return false
+
+	var file = FileAccess.open(file_path, FileAccess.WRITE)
+	if not file:
+		push_error("无法创建文件: %s" % file_path)
+		return false
+	
+	var json_string = JSON.stringify(data, "\t")
+	file.store_string(json_string)
+	return true 

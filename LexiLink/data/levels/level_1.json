@@ -1,0 +1,7 @@
+{
+    "level_1": {
+        "name": "Newbie Forest",
+        "card_pool": ["card_001"],
+        "boss": "some_boss_id"
+    }
+} 

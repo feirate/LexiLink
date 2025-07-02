@@ -1,0 +1,267 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# LexiLink 资源管理规范
+
+## 资源目录结构
+```
+assets/
+├── audio/              # 音频资源
+│   ├── effects/        # 音效文件
+│   │   ├── ui/        # UI音效
+│   │   └── gameplay/  # 游戏音效
+│   ├── music/         # 背景音乐
+│   └── syllables/     # 音节发音
+├── fonts/             # 字体文件
+│   ├── ui/           # UI字体
+│   └── gameplay/     # 游戏内字体
+├── icons/            # 图标资源
+│   ├── ui/          # UI图标
+│   └── items/       # 物品图标
+└── textures/         # 纹理资源
+    ├── cards/       # 卡片纹理
+    ├── backgrounds/ # 背景纹理
+    └── ui/          # UI纹理
+```
+
+## 资源命名规范
+1. 音频文件
+   ```
+   # 音效 (WAV格式)
+   sfx_[类型]_[动作].wav
+   例如:
+   - sfx_ui_click.wav
+   - sfx_card_flip.wav
+   - sfx_success.wav
+   
+   # 音乐 (OGG格式)
+   bgm_[场景]_[情绪].ogg
+   例如:
+   - bgm_menu_calm.ogg
+   - bgm_game_intense.ogg
+   
+   # 音节发音 (WAV格式)
+   syllable_[音节].wav
+   例如:
+   - syllable_a.wav
+   - syllable_ka.wav
+   ```
+
+2. 纹理文件
+   ```
+   # 卡片纹理 (PNG格式)
+   card_[类型]_[状态].png
+   例如:
+   - card_normal_front.png
+   - card_rare_back.png
+   
+   # UI纹理
+   ui_[组件]_[状态].png
+   例如:
+   - ui_button_normal.png
+   - ui_panel_background.png
+   
+   # 背景纹理
+   bg_[场景]_[变体].png
+   例如:
+   - bg_menu_light.png
+   - bg_game_dark.png
+   ```
+
+3. 字体文件
+   ```
+   # UI字体
+   font_[族名]_[粗细].ttf
+   例如:
+   - font_inter_regular.ttf
+   - font_inter_bold.ttf
+   
+   # 游戏字体
+   game_font_[用途]_[样式].ttf
+   例如:
+   - game_font_score_bold.ttf
+   - game_font_card_regular.ttf
+   ```
+
+## 资源优化指南
+1. 音频优化
+   ```gdscript
+   # 音效设置
+   - 格式: WAV (16bit, 44.1kHz)
+   - 长度: < 2秒
+   - 正规化: -3dB
+   
+   # 音乐设置
+   - 格式: OGG (高质量)
+   - 比特率: 192kbps
+   - 循环点标记
+   
+   # 音频加载
+   func preload_audio():
+       # 预加载常用音效
+       var common_sfx = [
+           "res://assets/audio/effects/ui/sfx_click.wav",
+           "res://assets/audio/effects/ui/sfx_hover.wav"
+       ]
+       
+       for sfx_path in common_sfx:
+           AudioManager.preload_sound(sfx_path)
+   ```
+
+2. 纹理优化
+   ```gdscript
+   # 纹理设置
+   - 分辨率: 2的幂次方
+   - 压缩: 根据用途选择
+   - 图集: 相关纹理打包
+   
+   # 纹理加载
+   func optimize_textures():
+       # 设置纹理过滤
+       var texture = load("res://assets/textures/cards/card_normal.png")
+       texture.set_flags(Texture2D.FLAG_MIPMAPS | Texture2D.FLAG_FILTER)
+       
+       # 使用图集
+       var sprite_frames = SpriteFrames.new()
+       sprite_frames.add_frame("default", texture)
+   ```
+
+3. 内存管理
+   ```gdscript
+   # 资源缓存
+   var resource_cache = {}
+   
+   func get_cached_resource(path: String) -> Resource:
+       if path in resource_cache:
+           return resource_cache[path]
+           
+       var resource = load(path)
+       resource_cache[path] = resource
+       return resource
+   
+   # 资源释放
+   func clear_cache():
+       for resource in resource_cache.values():
+           if resource is AudioStream:
+               resource.release()
+       resource_cache.clear()
+   ```
+
+## 资源导入设置
+1. 音频导入
+   ```
+   # .wav音效
+   [remap]
+   importer="wav"
+   type="AudioStreamWAV"
+   compress/mode=0
+   compress/lossy_quality=0.7
+   
+   # .ogg音乐
+   [remap]
+   importer="oggvorbisstr"
+   type="AudioStreamOggVorbis"
+   loop=true
+   loop_offset=0
+   ```
+
+2. 纹理导入
+   ```
+   # UI纹理
+   [remap]
+   importer="texture"
+   type="CompressedTexture2D"
+   compress/mode=0
+   compress/lossy_quality=0.7
+   compress/hdr_compression=1
+   
+   # 游戏纹理
+   [remap]
+   importer="texture"
+   type="CompressedTexture2D"
+   compress/mode=2
+   compress/lossy_quality=0.8
+   compress/hdr_compression=1
+   ```
+
+## 资源加载策略
+1. 预加载资源
+   ```gdscript
+   # 启动时预加载
+   func _ready():
+       preload_essential_resources()
+       
+   func preload_essential_resources():
+       # UI资源
+       preload("res://assets/textures/ui/common_atlas.png")
+       # 常用音效
+       preload("res://assets/audio/effects/ui/sfx_click.wav")
+       # 基础字体
+       preload("res://assets/fonts/ui/font_inter_regular.ttf")
+   ```
+
+2. 动态加载
+   ```gdscript
+   # 后台加载
+   func load_level_resources():
+       var loader = ResourceLoader.load_threaded_request(
+           "res://assets/textures/backgrounds/level_1.png"
+       )
+       while true:
+           var status = ResourceLoader.load_threaded_get_status(loader)
+           if status == ResourceLoader.THREAD_LOAD_LOADED:
+               return ResourceLoader.load_threaded_get(loader)
+           await get_tree().process_frame
+   ```
+
+## 资源版本控制
+1. 资源元数据
+   ```gdscript
+   # 资源版本信息
+   const ASSET_VERSION = {
+       "textures": "1.0.0",
+       "audio": "1.0.0",
+       "fonts": "1.0.0"
+   }
+   
+   # 版本检查
+   func check_asset_version():
+       var config = ConfigFile.new()
+       config.load("res://version.cfg")
+       
+       for category in ASSET_VERSION:
+           var current = config.get_value("assets", category, "0.0.0")
+           if current != ASSET_VERSION[category]:
+               update_assets(category)
+   ```
+
+2. 资源更新
+   ```gdscript
+   # 资源更新系统
+   func update_assets(category: String):
+       # 备份旧资源
+       backup_assets(category)
+       
+       # 下载新资源
+       download_assets(category)
+       
+       # 更新版本信息
+       update_version_info(category)
+   ```
+
+## 资源检查清单
+1. 新增资源检查
+   - [ ] 符合命名规范
+   - [ ] 正确的目录结构
+   - [ ] 适当的导入设置
+   - [ ] 资源优化完成
+   - [ ] 版本信息更新
+
+2. 发布前检查
+   - [ ] 资源完整性
+   - [ ] 资源加载测试
+   - [ ] 内存占用评估
+   - [ ] 版本一致性
+   - [ ] 备份确认

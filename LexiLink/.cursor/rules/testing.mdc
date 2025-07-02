@@ -1,0 +1,239 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# LexiLink 测试规范
+
+## 测试类型
+1. 单元测试
+   - 测试单个功能点
+   - 保持测试独立性
+   - 使用模拟对象
+   - 覆盖边界条件
+
+2. 集成测试
+   - 测试组件交互
+   - 验证数据流
+   - 测试场景切换
+   - 信号连接测试
+
+3. 性能测试
+   - 帧率测试
+   - 内存使用
+   - 加载时间
+   - 资源消耗
+
+4. 用户测试
+   - 功能可用性
+   - 界面友好性
+   - 操作流畅度
+   - 错误处理
+
+## 测试目录结构
+```
+tests/
+├── unit/                    # 单元测试
+│   ├── core/               # 核心系统测试
+│   ├── gameplay/           # 游戏逻辑测试
+│   └── utils/              # 工具类测试
+├── integration/            # 集成测试
+│   ├── scenes/            # 场景测试
+│   └── systems/           # 系统联动测试
+└── performance/           # 性能测试
+    ├── benchmarks/        # 基准测试
+    └── stress/            # 压力测试
+```
+
+## 单元测试规范
+1. 命名规则
+   ```gdscript
+   # 文件命名: test_xxx.gd
+   # 类命名: TestXXX
+   # 方法命名: test_should_xxx_when_yyy
+   
+   # 示例:
+   extends GutTest
+   class_name TestSyllableValidator
+   
+   func test_should_validate_vowel_connection_when_valid():
+       pass
+   
+   func test_should_reject_connection_when_invalid():
+       pass
+   ```
+
+2. 测试结构
+   ```gdscript
+   # AAA模式: Arrange, Act, Assert
+   func test_should_calculate_score_correctly():
+       # Arrange - 准备测试数据
+       var calculator = ScoreCalculator.new()
+       var correct_answers = 5
+       var total_questions = 10
+       
+       # Act - 执行被测试的操作
+       var score = calculator.calculate_score(correct_answers, total_questions)
+       
+       # Assert - 验证结果
+       assert_eq(score, 50.0, "分数计算应该正确")
+   ```
+
+3. 测试覆盖
+   - 正常路径测试
+   - 边界条件测试
+   - 错误处理测试
+   - 异常情况测试
+
+## 集成测试规范
+1. 场景测试
+   ```gdscript
+   extends GutTest
+   
+   var game_scene: GameScene
+   
+   func before_each():
+       game_scene = preload("res://scenes/game_scene.tscn").instantiate()
+       add_child(game_scene)
+   
+   func test_complete_game_flow():
+       # 1. 初始化游戏
+       await game_scene.ready
+       assert_true(game_scene.is_initialized())
+       
+       # 2. 执行游戏操作
+       game_scene.start_game()
+       await create_syllable_connection()
+       
+       # 3. 验证结果
+       assert_true(game_scene.is_connection_valid())
+       assert_eq(game_scene.get_score(), 10)
+   ```
+
+2. 系统联动测试
+   ```gdscript
+   func test_audio_system_integration():
+       # 1. 设置音频系统
+       var audio_manager = AudioManager.new()
+       var game_manager = GameManager.new()
+       
+       # 2. 测试交互
+       game_manager.connect_audio_system(audio_manager)
+       game_manager.trigger_success_event()
+       
+       # 3. 验证结果
+       assert_true(audio_manager.is_playing_success_sound())
+   ```
+
+## 性能测试规范
+1. 帧率测试
+   ```gdscript
+   func test_frame_rate_under_load():
+       var start_time = Time.get_ticks_msec()
+       var frame_count = 0
+       
+       # 模拟大量卡片
+       for i in range(100):
+           spawn_test_card()
+           
+       # 测量60帧的性能
+       while frame_count < 60:
+           await get_tree().process_frame
+           frame_count += 1
+           
+       var end_time = Time.get_ticks_msec()
+       var avg_frame_time = (end_time - start_time) / frame_count
+       
+       assert_less(avg_frame_time, 16.67) # 确保60FPS
+   ```
+
+2. 内存测试
+   ```gdscript
+   func test_memory_usage():
+       var initial_memory = OS.get_static_memory_usage()
+       
+       # 执行密集操作
+       for i in range(1000):
+           var card = create_and_destroy_card()
+           
+       # 强制GC
+       OS.delay_msec(100)
+       OS.force_garbage_collection()
+       
+       var final_memory = OS.get_static_memory_usage()
+       var memory_diff = final_memory - initial_memory
+       
+       assert_less(memory_diff, 1024 * 1024) # 内存增长不超过1MB
+   ```
+
+## 测试自动化
+1. CI/CD集成
+   ```yaml
+   # .github/workflows/test.yml
+   name: Tests
+   on: [push, pull_request]
+   
+   jobs:
+     test:
+       runs-on: ubuntu-latest
+       steps:
+         - uses: actions/checkout@v2
+         - name: Run Tests
+           run: |
+             godot --headless --run-tests
+             godot --headless --run-performance-tests
+   ```
+
+2. 本地测试脚本
+   ```bash
+   #!/bin/bash
+   # run_tests.sh
+   
+   echo "运行单元测试..."
+   godot --headless --run-tests tests/unit/
+   
+   echo "运行集成测试..."
+   godot --headless --run-tests tests/integration/
+   
+   echo "运行性能测试..."
+   godot --headless --run-tests tests/performance/
+   ```
+
+## 测试报告
+1. 覆盖率报告
+   ```
+   测试覆盖率报告
+   ---------------
+   总体覆盖率: 85%
+   - 核心系统: 90%
+   - 游戏逻辑: 85%
+   - 工具类: 80%
+   未覆盖区域:
+   - 特殊错误处理
+   - 随机事件处理
+   ```
+
+2. 性能报告
+   ```
+   性能测试报告
+   ---------------
+   - 平均帧率: 60fps
+   - 内存使用: 150MB
+   - 加载时间: 2.5s
+   - CPU使用: 25%
+   ```
+
+## 测试检查清单
+1. 新功能测试
+   - [ ] 单元测试已添加
+   - [ ] 集成测试已更新
+   - [ ] 性能影响已评估
+   - [ ] 边界条件已测试
+   - [ ] 错误处理已验证
+
+2. 回归测试
+   - [ ] 所有测试通过
+   - [ ] 性能指标达标
+   - [ ] 兼容性测试通过
+   - [ ] 用户场景测试通过
+   - [ ] 文档已更新

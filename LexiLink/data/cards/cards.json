@@ -1,0 +1,5 @@
+{
+    "cards": [
+        { "id": "card_001", "name": "Cat", "syllable_ids": ["syl_001"], "rarity": "common" }
+    ]
+} 
